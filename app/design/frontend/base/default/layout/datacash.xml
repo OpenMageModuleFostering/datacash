@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<layout version="0.1.0">
+    <checkout_hosted_start>
+        <reference name="root">
+            <action method="setTemplate"><template>page/empty.phtml</template></action>
+        </reference>
+        <reference name="content">
+            <block type="dpg/iframe_start" name="datacash_dpg_iframe" template="datacash/iframe/start.phtml" />
+        </reference>
+    </checkout_hosted_start>
+    <checkout_hosted_complete>
+        <reference name="root">
+            <action method="setTemplate"><template>page/empty.phtml</template></action>
+        </reference>
+        <reference name="content">
+            <block type="dpg/iframe_complete" name="datacash_dpg_iframe_complete" template="datacash/iframe/complete.phtml" />
+        </reference>
+    </checkout_hosted_complete>
+    <checkout_onepage_paymentmethod>
+        <reference name="checkout.onepage.billing">
+            <block type="dpg/form_api" name="payment.method.datacash_api" />
+            <block type="dpg/form_apiprereg" name="payment.method.datacash_api_prereg" />
+        </reference>
+    </checkout_onepage_paymentmethod>
+</layout>

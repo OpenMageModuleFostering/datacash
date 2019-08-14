@@ -1,0 +1,15 @@
+<p><strong>Please, wait a moment. This page will transfer your data to the Datacash payment gateway in a few seconds.</strong></p>
+<form name="datacash_hcc" id="datacash_hcc_form" action="<?php echo $this->getHpsUrl();?>" method="get" accept-charset="ISO-8859-1">
+    <fieldset>        
+            <input type="hidden" name="HPS_SessionID" value="<?php echo($this->getHpsSessionId()); ?>" />
+    </fieldset>
+</form>
+<script type="text/javascript">
+//<![CDATA[
+    var review = new VarienForm('datacash_hcc_form', '');
+    Event.observe(window, 'load', function() {
+        review.submit();
+    });
+//]]>
+</script>
+

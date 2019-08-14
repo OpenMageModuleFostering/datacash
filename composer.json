@@ -1,0 +1,16 @@
+{
+    "name": "OpenMageModuleFostering/Datacash",
+    "type": "magento-module",
+    "license": "OSL-3.0",
+    "homepage": "",
+    "description": "DataCash payment gateway integration",
+    "authors": [
+    {
+        "name": "DataCash",
+        "email": "support@datacash.com"
+    }
+],
+    "suggest": {
+        "magento-hackathon/magento-composer-installer": "*"
+    }
+}

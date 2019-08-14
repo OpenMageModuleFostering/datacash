@@ -1,0 +1,137 @@
+<?php $_code = $this->getMethodCode() ?>
+<ul class="form-list centinel" id="payment_form_<?php echo $_code ?>" style="display:none;">
+    <?php if ($this->canUseTokens()): ?>
+    <li>
+        <label for="id_<?php echo $_code ?>_tokencard_select" class="required"><em>*</em><?php echo $this->__('Stored Credit Card') ?></label>
+        <div class="input-box">
+            <select id="id_<?php echo $_code ?>_tokencard_select">
+                <option value="">&lt;<?php echo $this->__('create a new card')?>&gt;</option>
+                <?php foreach($this->getSessionTokens() as $card): ?>
+                <option value="<?php echo $card->getId() ?>"<?php echo $card->getIsDefault() ? ' selected="selected"' : '' ?>><?php echo $card->getCardDisplay() ?> <?php echo (string)$card->getCardType() ?></option>
+                <?php endforeach ?>
+            </select>
+        </div>
+        
+        <div class="<?php echo $_code ?>_remeber_this_card" style="display:none;">
+            <label for="id_<?php echo $_code ?>_remeber_this_card">Remember this card?</label>
+            <div class="input-box">
+                <input id="id_<?php echo $_code ?>_remeber_this_card" type="checkbox" value="1" />
+            </div>
+        </div>
+    </li>
+    <?php endif ?>
+    
+    <li>
+        <div id="<?php echo $_code ?>_iframe_block"<?php if ($this->canUseTokens()): ?> style="display:none;position:relative;"<?php endif ?>>
+            <div class="authentication">
+                <iframe id="<?php echo $_code ?>_iframe" frameborder="0" border="0" src="" style="height: 456px;"><?php echo $this->__('Please wait...') ?></iframe>
+            </div>
+            <div id="<?php echo $_code ?>_overlay" style="display:none;position:absolute;width:100%;height:100%;background-color:#fff;opacity:0.5;top:0px;left:0px;">
+                <div style="text-align:center; font-size:16px; line-height:30px"><?php echo $this->__('Please wait...') ?></div>
+            </div>
+        </div>
+        <script type="text/javascript">
+        //<![CDATA[
+            var iframeId = '<?php echo $_code ?>_iframe';
+            var iframeTarget = '<?php echo $this->getFrameUrl() ?>';
+            var iframeBlock = '<?php echo $_code ?>_iframe_block';
+            
+        <?php if ($this->canUseTokens()): ?>
+            var id_tokencard_select = 'id_<?php echo $_code ?>_tokencard_select';
+            var id_remeber_this_card = 'id_<?php echo $_code ?>_remeber_this_card';
+            var remeber_this_card = '.<?php echo $_code ?>_remeber_this_card';
+            var id_overlay = '<?php echo $_code ?>_overlay';
+            
+            $(iframeId).onload = function() {
+                $(id_overlay).hide();
+            }
+            
+            function updateIframe() {
+                $(iframeBlock).show();
+                
+                var remember_card_param = "";
+                if ($(id_remeber_this_card).getValue() == "1") {
+                    remember_card_param = "?remember=1";
+                }
+                $(id_overlay).show();
+                $(iframeId).src = iframeTarget + 'id/' + encodeURIComponent($(id_tokencard_select).getValue()) + remember_card_param;
+            }
+            
+            $(id_remeber_this_card).observe('change', updateIframe);
+            $(id_tokencard_select).observe('change', function(){
+                toggleRemeberCard(this.getValue());
+                updateIframe();
+            });
+            toggleRemeberCard($(id_tokencard_select).getValue());
+    
+            function toggleRemeberCard(value){
+                if (value == "") {
+                    $$(remeber_this_card)[0].show();
+                    $(id_remeber_this_card).checked = true;
+                } else {
+                    $$(remeber_this_card)[0].hide();
+                    $(id_remeber_this_card).checked = false;
+                }
+            }
+            
+            document.observe('payment-method:switched', function(evt){
+                if ($('opc-payment').hasClassName("active")) {
+                   if (evt.target.id == 'payment_form_<?php echo $_code ?>' || evt.target.id == 'p_method_<?php echo $_code ?>') {
+                        updateIframe();
+                    }
+                    if ($('payment-buttons-container')) {
+                        var buttons = $('payment-buttons-container').getElementsByClassName('button');
+                        if (buttons.length > 0) {
+                            if (evt.target.id == 'payment_form_<?php echo $_code ?>' || evt.target.id == 'p_method_<?php echo $_code ?>') {
+                                setTimeout(function(){ buttons[0].hide(); },1); //XXX: DOM bug
+                            } else {
+                                setTimeout(function(){ buttons[0].show(); },1); //XXX: DOM bug
+                            }
+                        }
+                    }
+                }
+            });
+        <?php else: ?>
+            // if Accordion is in use, listen for the payment step and load the
+            // iframe
+            if (typeof(Accordion) != 'undefined') {
+                var dcOpenSection = Accordion.prototype.openSection;
+                Accordion.prototype.openSection = function (section) {
+                    dcOpenSection.call(this, section);
+    
+                    if (section.id == 'opc-payment') {
+                        if ($('p_method_<?php echo $_code ?>').checked) {
+                            $(iframeId).src = iframeTarget;
+                        }
+                    }
+                }
+            }
+    
+            var onMethodSwitch = function (evt) {
+                if ($('opc-payment').hasClassName("active")) {
+                    var buttons = $('payment-buttons-container').getElementsByClassName('button');
+                    
+                    if (evt.target.id == 'payment_form_<?php echo $_code ?>' || evt.target.id == 'p_method_<?php echo $_code ?>') {
+                        if ($(iframeId).src != iframeTarget) {
+                            $(iframeId).src = iframeTarget;
+                        }
+                        if (buttons.length > 0) {
+                            setTimeout(function(){ buttons[0].hide(); },1); //XXX: DOM bug
+                        }
+                    } else {
+                        if (buttons.length > 0) {
+                            setTimeout(function(){ buttons[0].show(); },1); //XXX: DOM bug
+                        }
+                    }
+                }
+            }
+            
+            // multishipping doesn't use the custom event interface
+            $('p_method_<?php echo $_code ?>').observe('change', onMethodSwitch);
+            // whereas onepage cancels the event so use the custom event
+            document.observe('payment-method:switched', onMethodSwitch);
+        <?php endif; ?>
+        //]]>
+        </script>
+    </li>
+</ul>

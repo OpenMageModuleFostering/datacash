@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<config>
+    <modules>
+        <DataCash_Dpg>
+             <active>true</active>
+             <codePool>community</codePool>
+             <depends>
+                 <Mage_Core />
+                 <Mage_Payment />
+                 <Mage_Centinel />
+             </depends>
+        </DataCash_Dpg>
+    </modules>
+</config>
