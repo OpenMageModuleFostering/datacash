@@ -187,6 +187,20 @@ class DataCash_Dpg_Model_Datacash_Request extends Varien_Object
     }
 
     /**
+     * Add the UserAgent identification string to XML
+     *
+     * @return DataCash_Dpg_Model_DataCash_Request
+     */
+    public function addIdentification()
+    {
+        $mageVersion = (string) Mage::getVersion();
+        $moduleVersion = (string) Mage::getConfig()->getNode('modules/DataCash_Dpg')->version;
+        $userAgent = "Magento/{$mageVersion} ({$moduleVersion})";
+        $this->getRequest()->addChild('UserAgent', $userAgent);
+        return $this;
+    }
+
+    /**
      * Add the Transaction section to the request
      *
      * @return DataCash_Dpg_Model_DataCash_Request

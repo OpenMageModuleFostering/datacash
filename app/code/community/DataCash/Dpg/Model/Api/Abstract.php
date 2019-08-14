@@ -683,6 +683,7 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
         if (is_null($this->_request)) {
             $this->_request = Mage::getModel('dpg/datacash_request');
             $this->_request->addAuthentication($this->getMerchantId(), $this->getMerchantPassword());
+            $this->_request->addIdentification();
         }
         return $this->_request;
     }
