@@ -43,6 +43,12 @@ class DataCash_Dpg_Model_Datacash_Response extends Varien_Object
         return false;
     }
     
+    /**
+     * isMarkedForReview function.
+     * 
+     * @access public
+     * @return string
+     */
     public function isMarkedForReview()
     {
         return (string)$this->getData('Risk/action_response/screening_response/response_code') == DataCash_Dpg_Model_Code::REVIEW;
@@ -51,12 +57,23 @@ class DataCash_Dpg_Model_Datacash_Response extends Varien_Object
     /**
      * Was the transaction judged to be fraudulent
      *
-     * @return bool
+     * @return string
      * @author Alistair Stead
      **/
     public function isFraud()
     {
         return (string)$this->getData('Risk/action_response/screening_response/response_code') == DataCash_Dpg_Model_Code::FRAUD;
+    }
+    
+    /**
+     * getRiskResponse function.
+     * 
+     * @access public
+     * @return array
+     */
+    public function getRiskResponse()
+    {
+        return $this->getData('Risk/action_response');
     }
     
     /**

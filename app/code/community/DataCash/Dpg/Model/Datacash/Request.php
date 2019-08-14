@@ -819,6 +819,31 @@ class DataCash_Dpg_Model_Datacash_Request extends Varien_Object
     }
 
     /**
+     * addCallbackResponse function.
+     * 
+     * @access public
+     * @param mixed $vars
+     * @return void
+     */
+    public function addCallbackResponse($vars)
+    {
+        $txn = $this->getRequest()->Transaction->TxnDetails;
+        if (!$txn) {
+            throw new Exception('Parent node (Transaction->TxnDetails) does not exist');
+        }
+        
+        $merchConf = $txn->Risk->Action->MerchantConfiguration;
+        if (!$merchConf) {
+            throw new Exception('Parent node (Risk->Action->MerchantConfiguration) does not exist');
+        }
+        
+        $callbackConf = $merchConf->addChild('CallbackConfiguration');
+        $callbackConf->addChild('callback_url', $vars['callback_url']);
+        $callbackConf->addChild('callback_format', $vars['callback_format']);
+        //$callbackConf->addChild('callback_options', $vars['callback_options']);
+    }
+
+    /**
      * addThe3rdMan
      * @author David Marrs
      **/
@@ -845,10 +870,11 @@ class DataCash_Dpg_Model_Datacash_Request extends Varien_Object
         $customer->addChild('customer_dob', NULL);
         $customer->addChild('first_purchase_date', $previousOrders['first']);
         $customer->addChild('ip_address', $remoteIp);
+        
         $prevPurchases = $customer->addChild('previous_purchases');
         $prevPurchases->addAttribute('count', $previousOrders['count']);
         $prevPurchases->addAttribute('value', $previousOrders['total']);
-
+        
         if ($shippingAddress) {
             $this->addT3mAddress($t3m, 'DeliveryAddress', $shippingAddress);
         }
@@ -858,6 +884,7 @@ class DataCash_Dpg_Model_Datacash_Request extends Varien_Object
         $rt = $t3m->addChild('Realtime');
         $rt->addChild('real_time_callback', $callbackUrl);
         $rt->addChild('real_time_callback_format', 'HTTP');
+        //$rt->addChild('real_time_callback_options', '2');
         // XXX Field 'distribution_channel' is not specified as required so I'm
         // leaving it out.
         $order->addChild('distribution_channel', NULL); // XXX Where is this set in mage?
@@ -866,8 +893,8 @@ class DataCash_Dpg_Model_Datacash_Request extends Varien_Object
         foreach ($orderItems as $item) {
             $product = $products->addChild('Product');
             $product->addChild('code', $item->getSku());
-            $product->addChild('quantity', $item->getQtyOrdered());
-            $product->addChild('price', $item->getPrice());
+            $product->addChild('quantity', $item->getQty());
+            $product->addChild('price', $item->getProduct()->getPrice());
         }
     }
 

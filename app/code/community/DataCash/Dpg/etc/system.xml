@@ -521,6 +521,55 @@
                                 <allow_fraud_screening>1</allow_fraud_screening>
                             </depends>
                         </rsg_service_mode>
+                        <rsg_callbacks translate="label">
+                            <label>Enable callback services</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>511</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <allow_fraud_screening>1</allow_fraud_screening>
+                            </depends>
+                        </rsg_callbacks>
+                        <rsg_callbacks_autoupdate translate="label">
+                            <label>Automatically accept/deny payments based on recommendation</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>512</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <rsg_callbacks>1</rsg_callbacks>
+                            </depends>
+                        </rsg_callbacks_autoupdate>
+                        <rsg_callbacks_security translate="label">
+                            <label>Enable IP filtering</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>513</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <rsg_callbacks>1</rsg_callbacks>
+                            </depends>
+                            <comment>Only certain IPs are allowed to send callback</comment>
+                        </rsg_callbacks_security>
+                        <rsg_callbacks_ips translate="label">
+                            <label>List of IPs</label>
+                            <frontend_type>textarea</frontend_type>
+                            <sort_order>514</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <rsg_callbacks_security>1</rsg_callbacks_security>
+                            </depends>
+                            <comment>Separate IP's with a line-break</comment>
+                        </rsg_callbacks_ips>
                         
                         <!-- CUSTOMER -->
                         <rsg_data_customer_heading translate="label">
@@ -1524,7 +1573,56 @@
                                 <allow_fraud_screening>1</allow_fraud_screening>
                             </depends>
                         </rsg_service_mode>
-                        
+                        <rsg_callbacks translate="label">
+                            <label>Enable callback services</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>511</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <allow_fraud_screening>1</allow_fraud_screening>
+                            </depends>
+                        </rsg_callbacks>
+                        <rsg_callbacks_autoupdate translate="label">
+                            <label>Automatically accept/deny payments based on recommendation</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>512</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <rsg_callbacks>1</rsg_callbacks>
+                            </depends>
+                        </rsg_callbacks_autoupdate>
+                        <rsg_callbacks_security translate="label">
+                            <label>Enable IP filtering</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>513</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <rsg_callbacks>1</rsg_callbacks>
+                            </depends>
+                            <comment>Only certain IPs are allowed to send callback</comment>
+                        </rsg_callbacks_security>
+                        <rsg_callbacks_ips translate="label">
+                            <label>List of IPs</label>
+                            <frontend_type>textarea</frontend_type>
+                            <sort_order>514</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                            <depends>
+                                <rsg_callbacks_security>1</rsg_callbacks_security>
+                            </depends>
+                            <comment>Separate IP's with a line-break</comment>
+                        </rsg_callbacks_ips>
+
                         <!-- CUSTOMER -->
                         <rsg_data_customer_heading translate="label">
                             <label>Customer data to screening</label>

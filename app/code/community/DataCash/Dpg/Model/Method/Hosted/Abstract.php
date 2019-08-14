@@ -59,7 +59,6 @@ abstract class DataCash_Dpg_Model_Method_Hosted_Abstract
      * If the data is not supplied the error will be thrown by the API
      *
      * @return void
-     * @author Andy Thompson
      **/
     protected function _mapRequestDataToApi($payment, $amount)
     {

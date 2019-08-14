@@ -2,7 +2,7 @@
 <config>
     <modules>
         <DataCash_Dpg>
-            <version>1.2.5</version>
+            <version>1.2.9</version>
         </DataCash_Dpg>
     </modules>
     <global>
@@ -18,13 +18,31 @@
             </cc>
         </payment>    
         <events>
-            <datacash_dpg_t3m_callback>
+            <datacash_dpg_risk_callback_update>
                 <observers>
-                    <Datacash_dpg_model_api_observer>
+                    <Datacash_dpg_model_risk_observer>
                         <type>singleton</type>
                         <class>DataCash_Dpg_Model_Observer</class>
-                        <method>saveT3mRecommendationToOrder</method>
-                    </Datacash_dpg_model_api_observer>
+                        <method>afterRiskCallbackUpdate</method>
+                    </Datacash_dpg_model_risk_observer>
+                </observers>
+            </datacash_dpg_risk_callback_update>
+            <datacash_dpg_rsg_callback>
+                <observers>
+                    <Datacash_dpg_model_rsgcallback_observer>
+                        <type>singleton</type>
+                        <class>DataCash_Dpg_Model_Observer</class>
+                        <method>saveRiskRecommendationToOrder</method>
+                    </Datacash_dpg_model_rsgcallback_observer>
+                </observers>
+            </datacash_dpg_rsg_callback>
+            <datacash_dpg_t3m_callback>
+                <observers>
+                    <Datacash_dpg_model_t3mcallback_observer>
+                        <type>singleton</type>
+                        <class>DataCash_Dpg_Model_Observer</class>
+                        <method>saveRiskRecommendationToOrder</method>
+                    </Datacash_dpg_model_t3mcallback_observer>
                 </observers>
             </datacash_dpg_t3m_callback>
             <checkout_submit_all_after>
@@ -48,6 +66,9 @@
                     <tokencard>
                         <table>dpg_tokencard</table>
                     </tokencard>
+                    <risk>
+                        <table>dpg_risk</table>
+                    </risk>
                 </entities>
             </dpg_resource>
         </models>
@@ -73,12 +94,12 @@
                 <types>
                     <auth>
                         <code>authorize</code>
-                        <name>Authorise</name>
+                        <name>Authorise (PRE/FULFIL)</name>
                         <order>0</order>
                     </auth>
                     <pre>
                         <code>authorize_capture</code>
-                        <name>Authorise and Capture</name>
+                        <name>Authorise and Capture (AUTH)</name>
                         <order>10</order>
                     </pre>
                 </types>
@@ -130,6 +151,15 @@
                     </dpg>
                 </observers>
             </payment_info_block_prepare_specific_information>
+            <core_block_abstract_to_html_after>
+                <observers>
+                    <dpg_risk_block>
+                        <type>model</type>
+                        <class>dpg/observer</class>
+                        <method>addRiskDataToPayment</method>
+                    </dpg_risk_block>
+                </observers>
+            </core_block_abstract_to_html_after>
         </events>
     </adminhtml>
     <default>
@@ -149,6 +179,9 @@
                 <sandbox>0</sandbox>
                 <allow_fraud_screening>0</allow_fraud_screening>
                 <rsg_service_mode>1</rsg_service_mode>
+                <rsg_callbacks>0</rsg_callbacks>
+                <rsg_callbacks_autoupdate>0</rsg_callbacks_autoupdate>
+                <rsg_callbacks_security>0</rsg_callbacks_security>
                 <rsg_data_customer_first_name>1</rsg_data_customer_first_name>
                 <rsg_data_customer_ip_address>1</rsg_data_customer_ip_address>
                 <rsg_data_customer_email_address>1</rsg_data_customer_email_address>
@@ -201,6 +234,9 @@
                 <sandbox>0</sandbox>
                 <allow_fraud_screening>0</allow_fraud_screening>
                 <rsg_service_mode>1</rsg_service_mode>
+                <rsg_callbacks>0</rsg_callbacks>
+                <rsg_callbacks_autoupdate>0</rsg_callbacks_autoupdate>
+                <rsg_callbacks_security>0</rsg_callbacks_security>
                 <rsg_data_customer_first_name>1</rsg_data_customer_first_name>
                 <rsg_data_customer_ip_address>1</rsg_data_customer_ip_address>
                 <rsg_data_customer_email_address>1</rsg_data_customer_email_address>

@@ -30,6 +30,23 @@ class DataCash_Dpg_Model_Config extends Varien_Object
 {
     const TRANSACTION_TYPES = 'global/datacash/transaction/types';
 
+    const RSG_REJECT = 2;
+    const RSG_RELEASE = 0;
+    const RSG_HOLD = 1;
+    const RSG_INV = 9;
+
+    public $_t3mPaymentInfo = array(
+        0 => 'Release',
+        1 => 'Hold',
+        2 => 'Reject',
+        9 => 'Under Investigation',
+    );
+    
+    public $_t3mResponseMap = array(
+        't3m_score' => 'score',
+        't3m_recommendation' => 'recommendation',
+    );
+
     /**
      * Return the internal storeId
      *
@@ -187,7 +204,7 @@ class DataCash_Dpg_Model_Config extends Varien_Object
         }
         return false;
     }
-    
+
     /**
      * Should 3D Secure inormation be transmitted
      *
@@ -262,7 +279,7 @@ class DataCash_Dpg_Model_Config extends Varien_Object
         {
             return true;
         }
-        return false;        
+        return false;
     }
 
     public function getFraudScreeningMode($method = 'datacash_api')
@@ -276,36 +293,38 @@ class DataCash_Dpg_Model_Config extends Varien_Object
         {
             return true;
         }
-        return false;        
+        return false;
     }
 
     public function getIsAllowedT3m($method = 'datacash_api')
     {
-        if (Mage::getStoreConfigFlag("payment/{$method}/allow_t3m", $this->getStoreId()))
-        {
-            return true;
-        }
-        return false;
-    }
-
-    public function getT3mUseSslCallback($method = 'datacash_api')
-    {
-        if (Mage::getStoreConfigFlag("payment/{$method}/t3m_use_ssl_callback", $this->getStoreId()))
-        {
-            return true;
-        }
-        return false;
+        $mode = Mage::getStoreConfig("payment/{$method}/rsg_service_mode", $this->getStoreId());
+        return $mode == 't3m';
     }
 
     public function getT3mCallBackUrl($method = 'datacash_api')
     {
-        $defaultStore = Mage::getModel('core/store')->load('default', 'code');
-        $uri = 'index.php/datacash/t3m';
+        return Mage::getUrl('datacash/t3m/index', array('_secure' => true));
+    }
 
-        if ($this->getT3mUseSslCallback($method)) {
-            return Mage::getStoreConfig('web/secure/base_url', $defaultStore->getStoreId()) . $uri;
-        } else {
-            return Mage::getStoreConfig('web/unsecure/base_url', $defaultStore->getStoreId()) . $uri;
+    public function getAllowRsgCallback($method = 'datacash_api')
+    {
+        if (Mage::getStoreConfigFlag("payment/{$method}/rsg_callbacks", $this->getStoreId())) {
+            return true;
         }
+        return false;
+    }
+    
+    public function getRsgCallBackUrl($method = 'datacash_api')
+    {
+        return Mage::getUrl('datacash/rsg/index', array('_secure' => true));
+    }
+    
+    public function isRsgAutoUpdateEnabled($method = 'datacash_api')
+    {
+        if (Mage::getStoreConfigFlag("payment/{$method}/rsg_callbacks_autoupdate", $this->getStoreId())) {
+            return true;
+        }
+        return false;
     }
 }

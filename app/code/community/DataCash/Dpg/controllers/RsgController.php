@@ -27,15 +27,15 @@
  **/
 
 /**
- * DataCash_Dpg_T3mController
+ * DataCash_Dpg_RsgController
  *
  * Controller that handles all of the hosted payment processes
  *
  * @package DataCash
  * @subpackage Controller
- * @author David Marrs
+ * @author OnTap Group
  */
-class DataCash_Dpg_T3mController extends DataCash_Dpg_Controller_Abstract
+class DataCash_Dpg_RsgController extends DataCash_Dpg_Controller_Abstract
 {
     /**
      * indexAction function.
@@ -45,10 +45,10 @@ class DataCash_Dpg_T3mController extends DataCash_Dpg_Controller_Abstract
      */
     public function indexAction()
     {
-        $request = $this->getRequest();
-        if ($request->isPost()) {
+        $values = $this->getInputStreamAsArray();
+        if (count(array_keys($values))) {
             $response = $this->mapCallback(
-                $request->getPost(),
+                $values,
                 array(
                     'merchant_identifier' => 'merchant_identifier',
                     'order_id' => 'merchant_order_ref',
@@ -56,9 +56,9 @@ class DataCash_Dpg_T3mController extends DataCash_Dpg_Controller_Abstract
                     't3m_score' => 'score',
                     't3m_recommendation' => 'recommendation',
                 )
-            );
+            );            
             try {
-                Mage::dispatchEvent('datacash_dpg_t3m_callback', array(
+                Mage::dispatchEvent('datacash_dpg_rsg_callback', array(
                     'response' => $response
                 ));
                 die('ok');

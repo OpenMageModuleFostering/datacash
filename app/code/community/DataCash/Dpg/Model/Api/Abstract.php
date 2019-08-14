@@ -28,6 +28,9 @@
 
 abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
 {
+    const DEFAULT_CB_FORMAT = 'HTTP';
+    const DEFAULT_CB_OPTIONS = '02';
+
     /**
      * The internal member variable that will hold the client
      *
@@ -90,7 +93,7 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
      */
     public function getUniqueOrderNumber()
     {
-        return $this->getOrderNumber().' - '.time();
+        return $this->getOrderNumber();
     }
 
     /**
@@ -310,7 +313,7 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
 
     public function addFraudScreening()
     {
-        if (!$this->getUseFraudScreening()) {
+        if (!$this->getUseFraudScreening() || $this->getConfig()->getIsAllowedT3m($this->getMethod())) {
             return;
         }
         
@@ -325,6 +328,14 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
         $this->paymentRsgDataToRequest($policy['payment'], $req);
         $this->orderRsgDataToRequest($policy['order'], $req);
         $this->itemRsgDataToRequest($policy['item'], $req);
+        
+        if ($this->getConfig()->getAllowRsgCallback($this->getMethod())) {
+            $this->getRequest()->addCallbackResponse(array(
+                'callback_url' => $this->getConfig()->getRsgCallBackUrl($this->getMethod()),
+                'callback_format' => self::DEFAULT_CB_FORMAT,
+                //'callback_options' => self::DEFAULT_CB_OPTIONS,
+            ));
+        }
     }
     
     /* @return void */
@@ -744,5 +755,44 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
                ->setFilterDataKeys($this->_debugReplacePrivateDataKeys)
                ->log($debugData);
         }
+    }
+    
+    public function call3DLookup()
+    {
+        if (!$this->getConfig()->getIsAllowedT3m($this->getMethod())) {
+            return;
+        }
+        
+        if (Mage::getSingleton('customer/session')->isLoggedIn()) {
+            $customer = Mage::getSingleton('customer/session')->getCustomer();
+            $orders = Mage::getModel('sales/order')
+                ->getCollection()
+                ->addAttributeToSelect('*')
+                ->addFieldToFilter('customer_id', $customer->getId())
+                ->setOrder('created_at', 'asc');
+
+            $previousOrderTotal = 0;
+            foreach ($orders as $order) {
+                $previousOrderTotal += $order->getData('grand_total');
+            }
+            
+            $previousOrders = array(
+                'count' => count($orders),
+                'total' => $previousOrderTotal,
+                'first' => $orders->getSize() > 0 ?
+                    substr($orders->getFirstItem()->getCreatedAt(), 0, 10) : NULL
+            );
+        } else {
+            $previousOrders = array(
+                'count' => 0,
+                'total' => 0,
+                'first' => null,
+            );
+        }
+        
+        $quote = Mage::getSingleton('checkout/session')->getQuote();
+        $this->setOrderItems($quote->getAllVisibleItems());
+        $this->setPreviousOrders($previousOrders);
+        $this->setRemoteIp(Mage::helper('core/http')->getRemoteAddr());
     }
 }

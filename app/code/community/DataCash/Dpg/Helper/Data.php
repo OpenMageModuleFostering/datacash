@@ -40,6 +40,28 @@ class DataCash_Dpg_Helper_Data extends Mage_Core_Helper_Abstract
     protected $_status_prefix = "status_";
 
     /**
+     * isIpAllowed function.
+     * 
+     * @access public
+     * @param string $paymentMethodCode
+     * @return bool
+     */
+    public function isIpAllowed($paymentMethodCode)
+    {
+        $storeId = Mage::app()->getStore()->getId();
+        
+        if (!Mage::getStoreConfigFlag("payment/{$paymentMethodCode}/rsg_callbacks_security", $storeId)) {
+            return true;
+        }
+        
+        $ipsRaw = Mage::getStoreConfig("payment/{$paymentMethodCode}/rsg_callbacks_ips", $storeId);
+        $allowedIps = array_map('trim', explode("\n", $ipsRaw));
+        
+        $clientIp = Mage::helper('core/http')->getRemoteAddr();
+        return in_array($clientIp, $allowedIps);
+    }
+
+    /**
      * Tries to get a user-friently version from translartion by status code
      * returns False when it does not find it. 
      *

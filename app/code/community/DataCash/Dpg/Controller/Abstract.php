@@ -47,4 +47,43 @@ abstract class DataCash_Dpg_Controller_Abstract extends Mage_Core_Controller_Fro
     {
         return Mage::getSingleton('dpg/config');
     }
+    
+    /**
+     * mapCallback function.
+     * 
+     * @access protected
+     * @param array $request
+     * @param array $indices
+     * @return array
+     */
+    protected function mapCallback($request, $indices)
+    {
+        $mapped = array();
+        foreach ($indices as $i => $j) {
+            if ($request[$j] !== null) {
+                $mapped[$i] = $request[$j];
+            }
+        }
+        return $mapped;
+    }
+    
+    /**
+     * getInputStreamAsArray function.
+     * 
+     * @access protected
+     * @return array
+     */
+    protected function getInputStreamAsArray()
+    {
+        $rawInput = file_get_contents('php://input');
+        $keyValues = explode('&', $rawInput);
+        
+        $values = array();
+        foreach($keyValues as $keyValue) {
+            list($key, $value) = explode('=', $keyValue);
+            $values[$key] = $value;
+        }
+        
+        return $values;
+    }
 }

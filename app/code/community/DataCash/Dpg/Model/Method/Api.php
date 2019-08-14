@@ -97,8 +97,6 @@ class DataCash_Dpg_Model_Method_Api extends DataCash_Dpg_Model_Method_Abstract
         }
     }
 
-    protected $_t3mRecommendation           = null;
-
     /**
      * Authorise the payment
      *
@@ -119,9 +117,7 @@ class DataCash_Dpg_Model_Method_Api extends DataCash_Dpg_Model_Method_Abstract
                 $this->_api->setFraudScreeningPolicy($this->_fraudPolicy());
             }        
             $this->_api->callPre();
-            $t3mResponse = $this->_api->getResponse()->t3MToMappedArray(array(
-                't3m_score' => 'score',
-                't3m_recommendation' => 'recommendation'));
+            $t3mResponse = $this->_api->getResponse()->t3MToMappedArray($this->getConfig()->_t3mResponseMap);
             Mage::dispatchEvent('datacash_dpg_t3m_response', $t3mResponse);
         } catch (Exception $e) {
             Mage::throwException($e->getMessage());
@@ -129,32 +125,15 @@ class DataCash_Dpg_Model_Method_Api extends DataCash_Dpg_Model_Method_Abstract
 
         // Process the response
         $response = $this->_api->getResponse();
-        if ($response->isSuccessful()) {
+        if ($response->isSuccessful() || $response->isMarkedForReview()) {
             // Map data to the payment
+            $this->mapT3mInfoToPayment($t3mResponse, $payment);
             $this->_mapResponseToPayment($response, $payment);
         } else {
             $message = Mage::helper('dpg')->getUserFriendlyStatus($response->getStatus());
             throw new Mage_Payment_Model_Info_Exception($message ? $message : $response->getReason());
         }
-
-        if ($this->getConfig()->getIsAllowedT3m()) {
-            $t3mPaymentInfo = array('Release', 'Hold', 'Reject', 9 => 'Under Investigation');
-            $t3mPaymentResponse = $t3mResponse;
-            $t3mPaymentResponse['t3m_recommendation'] = $t3mPaymentInfo[$t3mResponse['t3m_recommendation']];
-            $this->_t3mRecommendation = $t3mPaymentResponse['t3m_recommendation'];
-            $oldInfo = $payment->getAdditionalInformation();
-            $newInfo = array_merge($oldInfo, $t3mPaymentResponse);
-            $payment->setAdditionalInformation($newInfo);
-
-            if ($this->_t3mRecommendation != 'Release') {
-                $payment->setIsTransactionPending(true);
-                if ('Reject' == $this->_t3mRecommendation) {
-                    $payment->setIsFraudDetected(true);
-                }
-            }
-        }
-
-
+        
         return $this;
     }
 
@@ -178,23 +157,29 @@ class DataCash_Dpg_Model_Method_Api extends DataCash_Dpg_Model_Method_Abstract
                $fulfill = $collection->count();
            }
 
-        if ($this->getConfig()->getIsAllowedT3m()) {
+        // Old T3M auth
+        if ($this->getConfig()->getIsAllowedT3m($this->getCode())) {
+            if ($this->getIsCallbackRequest() == 1) { // In case of callbacks, the order is already fulfilled by invoice->capture see Observer.php
+                return $this;
+            }
             // Must preauth card first (if not already done so) to make third
             // man realtime check.
-            if (!array_intersect_key($payment->getAdditionalInformation(), array('t3m_score'=>1, 't3m_recommendation'=>1))) {
-                $this->authorize($payment, $amount);
-
-                if ($this->_t3mRecommendation != 'Release') {
-                    return $this;
+            if (!$authTransaction) {
+                if (!array_intersect_key($payment->getAdditionalInformation(), array('t3m_score'=>1, 't3m_recommendation'=>1))) {
+                    $this->authorize($payment, $amount);
+    
+                    if ($this->_t3mRecommendation != 'Release') {
+                        return $this;
+                    }
+    
+                    $fulfill = true;
                 }
-
-                $fulfill = true;
-            }
-            if ($this->_t3mRecommendation == 'Release') {
-                $this->_api->setRequest(Mage::getModel('dpg/datacash_request'));
-                $this->_api->getRequest()->addAuthentication($this->_api->getMerchantId(), $this->_api->getMerchantPassword());
-
-                $payment->setAmountAuthorized($amount);
+                if ($this->_t3mRecommendation == 'Release') {
+                    $this->_api->setRequest(Mage::getModel('dpg/datacash_request'));
+                    $this->_api->getRequest()->addAuthentication($this->_api->getMerchantId(), $this->_api->getMerchantPassword());
+    
+                    $payment->setAmountAuthorized($amount);
+                }
             }
         }
         parent::capture($payment, $amount);
@@ -224,7 +209,7 @@ class DataCash_Dpg_Model_Method_Api extends DataCash_Dpg_Model_Method_Abstract
 
         // Process the response
         $response = $this->_api->getResponse();
-        if ($response->isSuccessful()) {
+        if ($response->isSuccessful() || $response->isMarkedForReview()) {
             // Map data to the payment
             $this->_mapResponseToPayment($response, $payment);
         } else {
@@ -479,32 +464,6 @@ class DataCash_Dpg_Model_Method_Api extends DataCash_Dpg_Model_Method_Abstract
                     $payment->getCcSsStartYear()
                 )
             );
-        }
-
-        if ($this->getConfig()->getIsAllowedT3m()) {
-            $this->_api->setForename($customer->getFirstName());
-            $this->_api->setSurname($customer->getLastName());
-            $this->_api->setCustomerEmail($customer->getEmail());
-            $remoteIp = $order->getRemoteIp()? $order->getRemoteIp(): $order->getQuote()->getRemoteIp();
-            $this->_api->setRemoteIp($remoteIp);
-            $this->_api->setOrderItems($order->getAllItems());
-
-            $orders = Mage::getModel('sales/order')
-                ->getCollection()
-                ->addAttributeToSelect('*')
-                ->addFieldToFilter('customer_id', $customer->getId())
-                ->setOrder('created_at', 'asc');
-            $previousOrderTotal = 0;
-            foreach ($orders as $order) {
-                $previousOrderTotal += $order->getData('grand_total');
-            }
-
-            $this->_api->setPreviousOrders(array(
-                'count' => count($orders->getData()),
-                'total' => $previousOrderTotal,
-                'first' => $orders->getSize() > 0?
-                    substr($orders->getFirstItem()->getCreatedAt(), 0, 10) : NULL
-            ));
         }
     }
 

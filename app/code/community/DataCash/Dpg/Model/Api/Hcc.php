@@ -134,6 +134,18 @@ class DataCash_Dpg_Model_Api_Hcc extends DataCash_Dpg_Model_Api_Abstract
         $this->_addLineItems();
         $this->_addCv2Avs();
 //        $this->_addRed();
+        $this->_addT3m(array(
+            'previousOrders' => $this->getPreviousOrders(),
+            'orderNumber' => $this->getUniqueOrderNumber(),
+            'orderItems' => $this->getOrderItems(),
+            'forename' => $this->getForename(),
+            'surname' => $this->getSurname(),
+            'email' => $this->getCustomerEmail(),
+            'remoteIp' => $this->getRemoteIp(),
+            'orderItems' => $this->getOrderItems(),
+            'billingAddress' => $this->getBillingAddress(),
+            'shippingAddress' => $this->getShippingAddress()
+        ));        
         $this->addFraudScreening();
 
         $this->call($request);
@@ -170,8 +182,20 @@ class DataCash_Dpg_Model_Api_Hcc extends DataCash_Dpg_Model_Api_Abstract
         $this->_addLineItems();
         $this->_addCv2Avs();
 //        $this->_addRed();
+        $this->_addT3m(array(
+            'previousOrders' => $this->getPreviousOrders(),
+            'orderNumber' => $this->getUniqueOrderNumber(),
+            'orderItems' => $this->getOrderItems(),
+            'forename' => $this->getForename(),
+            'surname' => $this->getSurname(),
+            'email' => $this->getCustomerEmail(),
+            'remoteIp' => $this->getRemoteIp(),
+            'orderItems' => $this->getOrderItems(),
+            'billingAddress' => $this->getBillingAddress(),
+            'shippingAddress' => $this->getShippingAddress()
+        ));
         $this->addFraudScreening();
-
+        
         $this->call($request);
      }
 
@@ -209,6 +233,8 @@ class DataCash_Dpg_Model_Api_Hcc extends DataCash_Dpg_Model_Api_Abstract
      **/
     public function call3DLookup()
     {
+        parent::call3DLookup();
+        
         $paymentAction = $this->getConfig()->getPaymentAction($this->getMethod());
         if ($paymentAction == Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE) {
             $this->callPre(self::ADD_THREED_SECURE_SECTION);

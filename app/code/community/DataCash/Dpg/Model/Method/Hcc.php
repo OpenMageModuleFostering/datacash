@@ -71,7 +71,7 @@ class DataCash_Dpg_Model_Method_Hcc
         $this->_api->setMerchantPassword($this->_getApiPassword());
 
         $this->_api->setIsSandboxed($this->getConfig()->isMethodSandboxed($this->getCode()));
-        
+
         if ($this->hasAdvancedVerification()) {
             $this->_api->setIsUseExtendedCv2(true);
             $this->_api->setCv2ExtendedPolicy($this->_extendedPolicy());
@@ -80,21 +80,21 @@ class DataCash_Dpg_Model_Method_Hcc
         // Set if line items should be transmitted
         $this->_api->setIsLineItemsEnabled($this->getConfig()->isLineItemsEnabled($this->getCode()));
     }
-    
-    // TODO: refactor to generic    
+
+    // TODO: refactor to generic
     public function getTxnData($txn_id)
     {
         $this->_api = Mage::getModel('dpg/api_hcc');
-        
+
         $this->_api->setMerchantId($this->_getApiMerchantId());
         $this->_api->setMerchantPassword($this->_getApiPassword());
-        
+
         $this->_api->setIsSandboxed($this->getConfig()->isMethodSandboxed($this->getCode()));
-        
+
         $this->_api->queryTxn($txn_id);
-        
+
         $response = $this->_api->getResponse();
-        
+
         if ($response->isSuccessful()) {
             return $response;
         } else {
@@ -102,7 +102,7 @@ class DataCash_Dpg_Model_Method_Hcc
             throw new Mage_Payment_Model_Info_Exception($message ? $message : $response->getReason());
         }
     }
-    
+
     /**
     * initSession
     * Initialise session with DataCash for HCC
@@ -117,12 +117,12 @@ class DataCash_Dpg_Model_Method_Hcc
         $returnUrl = Mage::getBaseUrl(Mage_Core_Model_Store::URL_TYPE_WEB).'checkout/hosted/complete/';
 
         $this->_initApi();
-        
+
         $amount = $quote->getBaseGrandTotal();
         if ($amount == 0) {
             $amount = 1;
         }
-        
+
         // Set the object properties required to make the API call
         $this->_api->setOrderNumber($orderId)
             ->setAmount($amount)
@@ -168,7 +168,7 @@ class DataCash_Dpg_Model_Method_Hcc
         parent::authorize($payment, $amount);
         $this->_initApi();
         $this->_mapRequestDataToApi($payment, $amount);
-        
+
         try {
             if ($this->hasFraudScreening()) {
                 $this->_api->setUseFraudScreening(true);
@@ -180,14 +180,17 @@ class DataCash_Dpg_Model_Method_Hcc
             } else {
                 $this->_api->callPre();
             }
+            $t3mResponse = $this->_api->getResponse()->t3MToMappedArray($this->getConfig()->_t3mResponseMap);
+            Mage::dispatchEvent('datacash_dpg_t3m_response', $t3mResponse);
         } catch (Exception $e) {
-            throw new Mage_Payment_Model_Info_Exception($e->getMessage());            
+            throw new Mage_Payment_Model_Info_Exception($e->getMessage());
         }
-        
+
         // Process the response
         $response = $this->_api->getResponse();
-        if ($response->isSuccessful()) {
+        if ($response->isSuccessful() || $response->isMarkedForReview()) {
             // Map data to the payment
+            $this->mapT3mInfoToPayment($t3mResponse, $payment);
             $this->_mapResponseToPayment($response, $payment);
         } else {
             $message = Mage::helper('dpg')->getUserFriendlyStatus($response->getStatus());
@@ -207,20 +210,55 @@ class DataCash_Dpg_Model_Method_Hcc
      */
     public function capture(Varien_Object $payment, $amount)
     {
-        parent::capture($payment, $amount);
-        $order = $payment->getOrder();
         $authTransaction = $payment->getAuthorizationTransaction();
+        $order = $payment->getOrder();
+
+        $fulfill = (bool)$authTransaction;
+        if (!$fulfill && $payment->getId()) {
+            $collection = Mage::getModel('sales/order_payment_transaction')->getCollection()
+                ->setOrderFilter($payment->getOrder())
+                ->addPaymentIdFilter($payment->getId())
+                ->addTxnTypeFilter(Mage_Sales_Model_Order_Payment_Transaction::TYPE_CAPTURE);
+            $fulfill = $collection->count();
+        }
+        
+        // Old T3M auth
+        if ($this->getConfig()->getIsAllowedT3m($this->getCode())) {
+            if ($this->getIsCallbackRequest() == 1) { // In case of callbacks, the order is already fulfilled by invoice->capture see Observer.php
+                return $this;
+            }
+            // Must preauth card first (if not already done so) to make third
+            // man realtime check.
+            if (!$authTransaction) {
+                if (!array_intersect_key($payment->getAdditionalInformation(), array('t3m_score'=>1, 't3m_recommendation'=>1))) {
+                    $this->authorize($payment, $amount);
+    
+                    if ($this->_t3mRecommendation != 'Release') {
+                        return $this;
+                    }
+    
+                    $fulfill = true;
+                }
+                if ($this->_t3mRecommendation == 'Release') {
+                    $this->_api->setRequest(Mage::getModel('dpg/datacash_request'));
+                    $this->_api->getRequest()->addAuthentication($this->_api->getMerchantId(), $this->_api->getMerchantPassword());
+    
+                    $payment->setAmountAuthorized($amount);
+                }
+            }
+        }
+        parent::capture($payment, $amount);
         $this->_initApi();
         $this->_mapRequestDataToApi($payment, $amount);
-        
+
         // If the payment has already been authorized we need to only call fullfill
-        if ($authTransaction && $payment->getAmountAuthorized() > 0 && $payment->getAmountAuthorized() >= $amount) {
+        if ($fulfill && $payment->getAmountAuthorized() > 0 && $payment->getAmountAuthorized() >= $amount) {
             try {
                 $this->_api->callFulfill();
             } catch (Exception $e) {
                 throw new Mage_Payment_Model_Info_Exception($e->getMessage());
             }
-        } else if ($authTransaction && $payment->getAmountAuthorized() > 0 && $payment->getAmountAuthorized() < $amount) {
+        } else if ($fulfill && $payment->getAmountAuthorized() > 0 && $payment->getAmountAuthorized() < $amount) {
             throw new Exception('This card has not been authorized for this amount');
         } else {
             try {
@@ -228,7 +266,7 @@ class DataCash_Dpg_Model_Method_Hcc
                     $this->_api->setUseFraudScreening(true);
                     $this->_api->setFraudScreeningPolicy($this->_fraudPolicy());
                 }
-                
+
                 if ($this->getIsCentinelValidationEnabled()) {
                     // if 3D secure check is turned on, we just have to authorize the previous calls
                     $validator = $this->getCentinelValidator();
@@ -243,7 +281,7 @@ class DataCash_Dpg_Model_Method_Hcc
 
         // Process the response
         $response = $this->_api->getResponse();
-        if ($response->isSuccessful()) {
+        if ($response->isSuccessful() || $response->isMarkedForReview()) {
             // Map data to the payment
             $this->_mapResponseToPayment($response, $payment);
         } else {

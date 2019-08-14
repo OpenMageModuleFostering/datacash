@@ -136,7 +136,9 @@ class DataCash_Dpg_Model_Api_Direct extends DataCash_Dpg_Model_Api_Abstract
      **/
     public function call3DLookup()
     {
-        $mpiMerchantReference = $this->getOrderNumber() . '-' . time();
+        parent::call3DLookup();
+        
+        $mpiMerchantReference = $this->getOrderNumber();
         $request = $this->getRequest()
             ->addTransaction()
             ->addTxnDetails($mpiMerchantReference, $this->getAmount(), $this->getCurrency(), 'ecomm')

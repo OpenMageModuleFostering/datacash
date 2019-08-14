@@ -22,7 +22,6 @@
  * @author Kristjan Heinaste <kristjan@ontapgroup.com>
  * @package DataCash
  **/
- 
 class DataCash_Dpg_Model_Source_RsgServiceTypes
 {
     /**
@@ -33,13 +32,20 @@ class DataCash_Dpg_Model_Source_RsgServiceTypes
      **/
     public function toOptionArray()
     {
-        $options = array(array('value' => 1,
-                               'label' => 'Pre-Auth Fraud Checking'),
-                         array('value' => 2,
-                               'label' => 'Post-Auth Fraud Checking')
-                        );
-
-
+        $options = array(
+            array(
+                'value' => 1,
+                'label' => 'Pre-Auth Fraud Checking'
+            ),
+            array(
+                'value' => 2,
+                'label' => 'Post-Auth Fraud Checking'
+            ),
+            array(
+                'value' => 't3m',
+                'label' => 'Legacy T3M'
+            ),
+        );
         return $options;
     }
 }

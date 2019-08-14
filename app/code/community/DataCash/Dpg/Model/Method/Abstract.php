@@ -39,6 +39,7 @@ abstract class DataCash_Dpg_Model_Method_Abstract extends Mage_Payment_Model_Met
     
     protected $_config;
     protected $_token = null;
+    protected $_t3mRecommendation = null;
     
     /**
      *
@@ -47,8 +48,35 @@ abstract class DataCash_Dpg_Model_Method_Abstract extends Mage_Payment_Model_Met
     public function __construct($params = array())
     {
         parent::__construct($params);
-        
         return $this;
+    }
+    
+    /**
+     * updateT3mInfo function.
+     * 
+     * @access protected
+     * @param mixed $t3mResponse
+     * @param Varien_Object $payment
+     * @return void
+     */
+    protected function mapT3mInfoToPayment($t3mResponse, Varien_Object $payment)
+    {
+        if ($this->getConfig()->getIsAllowedT3m($this->getCode())) {
+            $risk = Mage::getModel('dpg/risk_score');
+            $risk = $risk->storeDataToOrder($payment->getOrder(), $t3mResponse);
+            
+            $t3mPaymentResponse = $t3mResponse;
+            $payInfo = $this->getConfig()->_t3mPaymentInfo;
+            $t3mPaymentResponse['t3m_recommendation'] = $payInfo[$t3mResponse['t3m_recommendation']];
+            $this->_t3mRecommendation = $t3mPaymentResponse['t3m_recommendation'];
+            
+            if ($this->_t3mRecommendation != 'Release') {
+                $payment->setIsTransactionPending(true);
+                if ('Reject' == $this->_t3mRecommendation) { // TODO: refactor to use DataCash_Dpg_Model_Config::RSG_***
+                    $payment->setIsFraudDetected(true);
+                }
+            }
+        }        
     }
     
     /**
@@ -98,7 +126,7 @@ abstract class DataCash_Dpg_Model_Method_Abstract extends Mage_Payment_Model_Met
     public function hasFraudScreening()
     {
         $configData = $this->getConfigData('allow_fraud_screening');
-        if(is_null($configData) || $configData=='0'){
+        if (is_null($configData) || $configData=='0'){
             return false;
         }
         return (bool) $configData;
@@ -312,58 +340,72 @@ abstract class DataCash_Dpg_Model_Method_Abstract extends Mage_Payment_Model_Met
         if ($action == DataCash_Dpg_Model_Code::PAYMENT_REVIEW_DENY) {
             return true;
         }
-    
-        $this->_initApi();
         
-        $this->_mapRequestDataToApi($payment, null);
-        
-        try {
-            $this->_api->callReview($action);
-        } catch (Exception $e) {
-            Mage::throwException($e->getMessage());
-        }
-        // Process the response
-        $response = $this->_api->getResponse();
-        if ($response->isSuccessful()) {
-            $responseMap = array(
-              'cc_approval' => 'HistoricTxn/authcode',
-              'cc_trans_id' => 'datacash_reference',
-              'cc_status' => 'status',
-              'cc_status_description' => 'reason',
-            );
-            foreach ($responseMap as $paymentKey => $responseKey) {
-                if ($value = $response->getData($responseKey)) {
-                    $payment->setData($paymentKey, $value);
+        if ($action == DataCash_Dpg_Model_Code::PAYMENT_REVIEW_ACCEPT) {
+            $this->_initApi();
+            $this->_mapRequestDataToApi($payment, null);
+            
+            // Handle old legacy route
+            if ($this->getConfig()->getIsAllowedT3m($this->getCode())) {
+                $this->_initApi();
+                $this->_mapRequestDataToApi($payment, null);
+                try {
+                    $this->_api->callFulfill();
+                } catch (Exception $e) {
+                    throw new Mage_Payment_Model_Info_Exception($e->getMessage());
                 }
-            }
-            $responseTransactionInfoMap = array(
-                'CardTxn' => 'CardTxn',
-                'datacash_reference' => 'datacash_refrence',
-                'mode' => 'mode',
-                'reason' => 'reason',
-                'status' => 'status',
-                'time' => 'time',
-                'authcode' => 'HistoricTxn/authcode',
-            );
-            foreach ($responseTransactionInfoMap as $paymentKey => $responseKey) {
-                if ($value = $response->getData($responseKey)) {
-                    $payment->setTransactionAdditionalInfo($paymentKey, $value);
-                }
+                return true;
             }
             
-            //
-            // XXX: This section depends on $action
-            // but because DC does not support deny action yet, we leave this as is.
-            //
-            $payment->setTransactionId($response->getDatacashReference())
-                ->setShouldCloseParentTransaction(true)
-                ->setIsTransactionClosed(true)
-                ->setIsTransactionApproved(true);
-        } else {
-            Mage::throwException($response->getReason());
+            try {
+                $this->_api->callReview($action);
+            } catch (Exception $e) {
+                Mage::throwException($e->getMessage());
+            }
+            // Process the response
+            $response = $this->_api->getResponse();
+            if ($response->isSuccessful()) {
+                $responseMap = array(
+                  'cc_approval' => 'HistoricTxn/authcode',
+                  'cc_trans_id' => 'datacash_reference',
+                  'cc_status' => 'status',
+                  'cc_status_description' => 'reason',
+                );
+                foreach ($responseMap as $paymentKey => $responseKey) {
+                    if ($value = $response->getData($responseKey)) {
+                        $payment->setData($paymentKey, $value);
+                    }
+                }
+                $responseTransactionInfoMap = array(
+                    'CardTxn' => 'CardTxn',
+                    'datacash_reference' => 'datacash_refrence',
+                    'mode' => 'mode',
+                    'reason' => 'reason',
+                    'status' => 'status',
+                    'time' => 'time',
+                    'authcode' => 'HistoricTxn/authcode',
+                );
+                foreach ($responseTransactionInfoMap as $paymentKey => $responseKey) {
+                    if ($value = $response->getData($responseKey)) {
+                        $payment->setTransactionAdditionalInfo($paymentKey, $value);
+                    }
+                }
+                
+                //
+                // XXX: This section depends on $action
+                // but because DC does not support deny action yet, we leave this as is.
+                //
+                $payment->setTransactionId($response->getDatacashReference())
+                    ->setShouldCloseParentTransaction(true)
+                    ->setIsTransactionClosed(true)
+                    ->setIsTransactionApproved(true);
+            } else {
+                Mage::throwException($response->getReason());
+            }
+            return true;        
         }
-
-        return true;        
+        
+        Mage::throwException("Payment action '{$action}' was not understood");
     }    
     
     /**
@@ -562,7 +604,9 @@ abstract class DataCash_Dpg_Model_Method_Abstract extends Mage_Payment_Model_Met
             	}
             }
         }
-
+        if ($this->getConfig()->getIsAllowedT3m($this->getCode())) {
+            $this->mapT3mToApi($order, $customer);
+        }
     }
 
     /**
@@ -619,6 +663,8 @@ abstract class DataCash_Dpg_Model_Method_Abstract extends Mage_Payment_Model_Met
         if ($response->isMarkedForReview()) {
             $payment->setIsTransactionPending(true);
         }
+        Mage::getModel('dpg/risk')->storeRiskResponse($payment, $response);
+        
         $datacashReferenceMap = array(
             'datacash_reference',
             'QueryTxnResult/datacash_reference'
@@ -674,5 +720,31 @@ abstract class DataCash_Dpg_Model_Method_Abstract extends Mage_Payment_Model_Met
             $this->_dataCashSession = Mage::getSingleton('checkout/session');
         }
         return $this->_dataCashSession;
+    }  
+    
+    protected function mapT3mToApi($order, $customer)
+    {
+        $remoteIp = $order->getRemoteIp()? $order->getRemoteIp(): $order->getQuote()->getRemoteIp();
+        $this->_api->setRemoteIp($remoteIp);
+        $this->_api->setOrderItems($order->getAllVisibleItems());
+
+        $orders = Mage::getModel('sales/order')
+            ->getCollection()
+            ->addAttributeToSelect('*')
+            ->addFieldToFilter('customer_id', $customer->getId())
+            ->setOrder('created_at', 'asc');
+            
+        $previousOrderTotal = 0;
+        foreach ($orders as $order) {
+            $previousOrderTotal += $order->getData('grand_total');
+        }
+
+        $this->_api->setPreviousOrders(array(
+            'count' => count($orders),
+            'total' => $previousOrderTotal,
+            'first' => $orders->getSize() > 0?
+                substr($orders->getFirstItem()->getCreatedAt(), 0, 10) : NULL
+        ));
     }    
+      
 }

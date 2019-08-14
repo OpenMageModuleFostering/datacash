@@ -30,6 +30,24 @@ class DataCash_Dpg_Model_Observer
 {
 
     /**
+     * addRiskDataToPayment function.
+     * 
+     * @access public
+     * @param mixed $observer
+     * @return void
+     */
+    public function addRiskDataToPayment($observer)
+    {
+        $block = $observer->getEvent()->getBlock();
+        if (get_class($block) == "Mage_Adminhtml_Block_Sales_Order_View_Info") {
+            $riskBlock = Mage::app()->getLayout()->createBlock('dpg/adminhtml_sales_order_risk');
+            $riskBlock->setOrder($block->getOrder());
+            $out = $observer->getTransport()->getHtml();
+            $observer->getTransport()->setHtml($out . $riskBlock->toHtml());
+        }
+    }
+
+    /**
      * Add DataCash data to info block
      *
      * Add 3D Secure, CV2 amd ReD information so that it can be seen in the admin view
@@ -64,8 +82,6 @@ class DataCash_Dpg_Model_Observer
             'cc_avs_postcode_result',
             'cc_avs_cv2_result',
             'mode',
-            't3m_score',
-            't3m_recommendation'
         );
         foreach ($info as $key) {
             if ($value = $payment->getAdditionalInformation($key)) {
@@ -90,59 +106,104 @@ class DataCash_Dpg_Model_Observer
         return count($arr) === count(array_intersect_key($arr, array_flip($list)));
     }
 
-    public function saveT3mRecommendationToOrder($data)
+    /**
+     * afterRiskCallbackUpdate function.
+     * 
+     * @access public
+     * @param mixed $observer
+     * @return void
+     */
+    public function afterRiskCallbackUpdate($observer)
     {
+        $event = $observer->getEvent();
+        $order = $event->getOrder();
+        $risk = $event->getRisk();
+        $payment = $order->getPayment();
+        
+        $autoUpdate = Mage::getSingleton('dpg/config')->isRsgAutoUpdateEnabled($payment->getMethod());
+        if ($autoUpdate) {
+            $t3mPaymentInfo = Mage::getSingleton('dpg/config')->_t3mPaymentInfo;
+            switch($t3mPaymentInfo[$risk->getRecommendation()]) { // TODO: refactor to use DataCash_Dpg_Model_Config::RSG_***
+                case 'Release':
+                    $payment->accept();
+                    $order->save();
+                    
+                    // XXX: "auto accept" overrides the Payment Action in a way that it will create an invoice and issue a fulfill request
+                    // not just authorise the payment
+                    $paymentAction = Mage::getSingleton('dpg/config')->getPaymentAction($payment->getMethod());
+                    if ($paymentAction == Mage_Payment_Model_Method_Abstract::ACTION_AUTHORIZE) {
+                        $order = Mage::getModel('sales/order')->load($order->getId()); // XXX: order needs to be reloaded
+                        $order->getPayment()->getMethodInstance()->setIsCallbackRequest(1);
+                        $order->getPayment()->capture();
+                        $order->save();
+                    }
+                    break;
+                case 'Reject':
+                    $payment->setIsFraudDetected(true);
+                    $payment->deny();
+                    $order->setState(Mage_Sales_Model_Order::STATE_PAYMENT_REVIEW, Mage_Sales_Model_Order::STATUS_FRAUD);
+                    $order->save();
+                    break;
+                case 'Hold':
+                    $order->setState(Mage_Sales_Model_Order::STATE_PAYMENT_REVIEW, true);
+                    $order->save();
+                    break;
+                default:
+                    throw new Exception('Unknown response recommendation: '.$risk->getRecommendation());                
+            }
+        }
+    }
+
+    /**
+     * saveRiskRecommendationToOrder function.
+     * 
+     * @access public
+     * @param mixed $observer
+     * @return void
+     */
+    public function saveRiskRecommendationToOrder($observer)
+    {
+        $data = $observer->getEvent()->getResponse();
+        
         $t3mKeys = array('merchant_identifier', 'order_id', 't3m_id', 't3m_score', 't3m_recommendation');
-        $t3mPaymentInfo = array('Release', 'Hold', 'Reject', 9 => 'Under Investigation');
-        if ( ! $this->_arrayKeysInList((array)$data['response'], $t3mKeys)) {
+        $t3mPaymentInfo = Mage::getSingleton('dpg/config')->_t3mPaymentInfo;
+        if ( ! $this->_arrayKeysInList((array)$data, $t3mKeys)) {
             Mage::throwException('Observer' . __METHOD__ . ' was expecting different data.');
         }
-        $rsp = (array)$data['response'];
+        $rsp = (array)$data;
+        
+        $order_id = $rsp['order_id'];
         $orders = Mage::getModel('sales/order')->getCollection();
-        $orders->addFieldToFilter('increment_id', $rsp['order_id']);
+        $orders->addFieldToFilter('increment_id', $order_id);
         $order = $orders->getFirstItem();
         if (!$order->getId()) {
-            Mage::throwException(__METHOD__ . ' could not find order ' . $rsp['order_id']);
+            Mage::throwException(__METHOD__ . ' could not find order ' . $order_id);
+        }
+        
+        if (!Mage::helper('dpg')->isIpAllowed($order->getPayment()->getMethod())) {
+            Mage::throwException('IP_restricted');
+        }
+        
+        $config = Mage::getSingleton('dpg/config');
+        if ($config->isMethodDebug($order->getPayment()->getMethod())) {
+            Mage::log(var_export($data, 1), null, $order->getPayment()->getMethod().'.log');
         }
 
         if (Mage_Sales_Model_Order::STATE_PAYMENT_REVIEW != $order->getState()) {
             throw new Exception(
                 'order state was not expected (while expecting it to be payment_review), order id: '
-                .$rsp['order_id'].'; '
+                .$order_id.'; '
                 .'suggested new recommendation: '.$t3mPaymentInfo[$rsp['t3m_recommendation']]
             );
         }
 
-        $payment = $order->getPayment();
-
-        $oldInfo = $payment->getAdditionalInformation();
-        $newInfo = array_merge($oldInfo, array(
-            't3m_id' => $rsp['t3m_id'],
-            't3m_score' => $rsp['t3m_score'],
-            't3m_recommendation' => $t3mPaymentInfo[$rsp['t3m_recommendation']],
+        $risk = Mage::getModel('dpg/risk_score');
+        $risk = $risk->storeDataToOrder($order, $rsp);
+        
+        Mage::dispatchEvent('datacash_dpg_risk_callback_update', array(
+            'order' => $order,
+            'risk' => $risk
         ));
-        $payment->setAdditionalInformation($newInfo);
-
-        $order->save();
-
-        switch($newInfo['t3m_recommendation']) {
-            case 'Release':
-                $payment->accept();
-                $order->save();
-                break;
-            case 'Reject':
-                $payment->setIsFraudDetected(true);
-                $payment->deny();
-                $order->setState(Mage_Sales_Model_Order::STATE_PAYMENT_REVIEW, Mage_Sales_Model_Order::STATUS_FRAUD);
-                $order->save();
-                break;
-            case 'Hold':
-                $order->setState(Mage_Sales_Model_Order::STATE_PAYMENT_REVIEW, true);
-                $order->save();
-                break;
-            default:
-                throw new Exception('Unknown response recommendation: '.$rsp['t3m_recommendation']);
-        }
     }
 
     /**
@@ -155,16 +216,17 @@ class DataCash_Dpg_Model_Observer
      */
     public function afterOrderSubmit(Varien_Event_Observer $observer)
     {
-        if (!Mage::getSingleton('dpg/config')->getIsAllowedT3m()) {
-            return;
-        }
-
         $order = $observer->getEvent()->getOrder();
         $payment = $order->getPayment();
-
+        
+        if (!Mage::getSingleton('dpg/config')->getIsAllowedT3m($payment->getMethod())) {
+            return;
+        }
+        
         if (Mage_Sales_Model_Order::STATE_PAYMENT_REVIEW == $order->getState() && $payment->getIsTransactionPending()) {
-            $info = $payment->getAdditionalInformation();
-            if (isset($info['t3m_recommendation']) && ('Reject' == $info['t3m_recommendation'])) {
+            $item = Mage::getModel('dpg/risk_score')->loadByOrderId($order->getId());
+            $instance = $item->getTypeInstanceFromItem($item);
+            if ($instance->getRecommendationDisplay() == 'Reject') { // TODO: refactor to use DataCash_Dpg_Model_Config::RSG_REJECT
                 // load new payment to avoid payment::$_transactionsLookup caching of value 'false'
                 $loadedPayment = Mage::getModel('sales/order_payment')->load($payment->getId());
                 if ($loadedPayment->getId()) {
