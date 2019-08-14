@@ -129,7 +129,7 @@ class DataCash_Dpg_Model_Method_Api extends DataCash_Dpg_Model_Method_Abstract
 
         // Process the response
         $response = $this->_api->getResponse();
-        if ($response->isSuccessful() || $response->isMarkedForReview() || $response->isFraud()) {
+        if ($response->isSuccessful()) {
             // Map data to the payment
             $this->_mapResponseToPayment($response, $payment);
         } else {
@@ -224,7 +224,8 @@ class DataCash_Dpg_Model_Method_Api extends DataCash_Dpg_Model_Method_Abstract
 
         // Process the response
         $response = $this->_api->getResponse();
-        if ($response->isSuccessful() || $response->isMarkedForReview() || $response->isFraud()) {
+        if ($response->isSuccessful()) {
+            // Map data to the payment
             $this->_mapResponseToPayment($response, $payment);
         } else {
             $message = Mage::helper('dpg')->getUserFriendlyStatus($response->getStatus());
