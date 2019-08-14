@@ -544,7 +544,12 @@ abstract class DataCash_Dpg_Model_Method_Abstract extends Mage_Payment_Model_Met
         // add order line items
         $this->_api->setCartItems($order->getAllVisibleItems());
         // Add historic details
-        $this->_api->setDataCashReference($payment->getCcTransId());
+        if ($auth = $payment->getAuthorizationTransaction()) {
+            $txnDetails = explode('-',$auth->getTxnId());
+            $this->_api->setDataCashReference(array_shift($txnDetails));
+        } else {
+            $this->_api->setDataCashReference($payment->getCcTransId());
+        }
         $this->_api->setAuthCode($payment->getCcApproval());
         $centinel = $this->getCentinelValidator();
         if ($centinel) {
@@ -620,7 +625,7 @@ abstract class DataCash_Dpg_Model_Method_Abstract extends Mage_Payment_Model_Met
         );
         foreach ($datacashReferenceMap as $responseKey) {
             if ($value = $response->getData($responseKey)) {
-                $payment->setTransactionId($value)
+                $payment->setTransactionId($value.'-'.time())
                     ->setShouldCloseParentTransaction(false)
                     ->setIsTransactionClosed(false);
             }

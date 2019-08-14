@@ -129,7 +129,7 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
     {
         $request = $this->getRequest()
             ->addTransaction()
-            ->addTxnDetails($this->getOrderNumber(), $this->getAmount(), $this->getCurrency())
+            ->addTxnDetails($this->getUniqueMercRef(), $this->getAmount(), $this->getCurrency())
             ->addCardTxn('refund', $this->getAuthCode());
 
         $this->call($request);
@@ -182,6 +182,11 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
         $this->call($request);
     }
 
+    private function getUniqueMercRef()
+    {
+        return $this->getOrderNumber().'-'.time();
+    }
+
     /**
      * Call the DataCash API to make a fulfill request
      *
@@ -192,7 +197,7 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
     {
         $request = $this->getRequest()
             ->addTransaction()
-            ->addTxnDetails($this->getOrderNumber(), $this->getAmount(), $this->getCurrency())
+            ->addTxnDetails($this->getUniqueMercRef(), $this->getAmount(), $this->getCurrency())
             ->addHistoricTxn('fulfill', $this->getDataCashReference(), $this->getAuthCode());
 
         $this->call($request);
@@ -208,7 +213,7 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
     {
         $request = $this->getRequest()
             ->addTransaction()
-            ->addTxnDetails($this->getOrderNumber(), $this->getAmount())
+            ->addTxnDetails($this->getUniqueMercRef(), $this->getAmount())
             ->addHistoricTxn('txn_refund', $this->getDataCashReference(), $this->getAuthCode());
 
         $this->call($request);
@@ -224,7 +229,7 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
     {
         $request = $this->getRequest()
             ->addTransaction()
-            ->addTxnDetails($this->getOrderNumber(), $this->getAmount(), $this->getCurrency())
+            ->addTxnDetails($this->getUniqueMercRef(), $this->getAmount(), $this->getCurrency())
             ->addHistoricTxn('authorize_referral_request', $this->getDataCashReference(), $this->getAuthCode());
 
         $this->call($request);

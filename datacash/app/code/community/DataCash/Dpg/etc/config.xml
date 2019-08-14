@@ -2,7 +2,7 @@
 <config>
     <modules>
         <DataCash_Dpg>
-            <version>1.2.1</version>
+            <version>1.2.2</version>
         </DataCash_Dpg>
     </modules>
     <global>

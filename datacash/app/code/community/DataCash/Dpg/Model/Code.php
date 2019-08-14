@@ -31,8 +31,8 @@ class DataCash_Dpg_Model_Code
     /* Statuses */
     const SUCCESS = 1;
     const SOCKET_WRITE_ERROR = 2;
-    const FRAUD = 1126;
-    const REVIEW = 1127;
+    const FRAUD = '01';
+    const REVIEW = '02';
     const PAYMENT_REVIEW_ACCEPT = 'accept_review';
     const PAYMENT_REVIEW_DENY = 'deny_review';
     

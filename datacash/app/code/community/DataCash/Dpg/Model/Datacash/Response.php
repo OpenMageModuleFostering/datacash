@@ -45,7 +45,7 @@ class DataCash_Dpg_Model_Datacash_Response extends Varien_Object
     
     public function isMarkedForReview()
     {
-        return $this->getStatus() == DataCash_Dpg_Model_Code::REVIEW;
+        return (string)$this->getData('Risk/action_response/screening_response/response_code') == DataCash_Dpg_Model_Code::REVIEW;
     }
     
     /**
@@ -56,10 +56,7 @@ class DataCash_Dpg_Model_Datacash_Response extends Varien_Object
      **/
     public function isFraud()
     {
-        if ($this->getStatus() == DataCash_Dpg_Model_Code::FRAUD) {
-            return true;
-        }
-        return false;
+        return (string)$this->getData('Risk/action_response/screening_response/response_code') == DataCash_Dpg_Model_Code::FRAUD;
     }
     
     /**
