@@ -1,0 +1,88 @@
+<?php if ($this->hasRiskData()): ?>
+<div class="box-left">
+    <div class="entry-edit">
+        <div class="entry-edit-head">
+            <h4 class="icon-head"><?php echo $this->__('DataCash Fraud Check') ?></h4>
+        </div>
+        <fieldset>
+            <?php foreach($this->getRiskData() as $item): ?>
+                <?php $_item = $item->getItem(); ?>
+                <?php if ($item instanceof DataCash_Dpg_Model_Risk_Screening): ?>
+                    <strong><?php echo $this->__('Screening Response') ?></strong>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td><?php echo $this->__('Response code:') ?></td>
+                                <td><?php echo $_item->getResponseCode() ?></td>
+                            </tr>
+                            <tr>
+                                <td><?php echo $this->__('Response message:') ?></td>
+                                <td><?php echo $_item->getResponseMessage() ?></td>
+                            </tr>
+                            <tr>
+                                <td><?php echo $this->__('CPI value:') ?></td>
+                                <td><?php echo $_item->getCpiValue() ?></td>
+                            </tr>
+                            <tr>
+                                <td><?php echo $this->__('Transaction ID:') ?></td>
+                                <td><?php echo $_item->getTransactionId() ?></td>
+                            </tr>
+                            <tr>
+                                <td><?php echo $this->__('Additional messages:') ?></td>
+                                <td>
+                                    <?php foreach($_item->getAdditionalMessages() as $message): ?>
+                                    <p><?php echo $message['message'] ?></p>
+                                    <?php endforeach; ?>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br />
+                <?php endif; ?>
+                
+                <?php if ($item instanceof DataCash_Dpg_Model_Risk_Bankresult): ?>
+                    <strong><?php echo $this->__('Bank Response') ?></strong>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td><?php echo $this->__('Response code:') ?></td>
+                                <td><?php echo $_item->getResponseCode() ?></td>
+                            </tr>
+                            <tr>
+                                <td><?php echo $this->__('Response message:') ?></td>
+                                <td><?php echo $_item->getResponseMessage() ?></td>
+                            </tr>
+                            <tr>
+                                <td><?php echo $this->__('CPI value:') ?></td>
+                                <td><?php echo $_item->getCpiValue() ?></td>
+                            </tr>
+                            <tr>
+                                <td><?php echo $this->__('Transaction ID:') ?></td>
+                                <td><?php echo $_item->getTransactionId() ?></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br />                
+                <?php endif; ?>
+                
+                <?php if ($item instanceof DataCash_Dpg_Model_Risk_Score): ?>
+                    <strong><?php echo $this->__('Score Response') ?></strong>
+                    <table>
+                        <tbody>
+                            <tr>
+                                <td><?php echo $this->__('Score:') ?></td>
+                                <td><?php echo $_item->getScore() ?></td>
+                            </tr>
+                            <tr>
+                                <td><?php echo $this->__('Recommendation:') ?></td>
+                                <td><?php echo $item->getRecommendationDisplay() ?></td>
+                            </tr>
+                        </tbody>
+                    </table>                
+                <?php endif; ?>
+            <?php endforeach; ?>
+        </fieldset>        
+    </div>
+</div>
+<div class="clear"></div>
+<?php endif; ?>
