@@ -1,0 +1,133 @@
+<?php
+    $billingBlock = $this->getChild('billing')->setAddressForReview($this->getQuote()->getBillingAddress());
+    $shippingAddress = $this->getShippingAddress();
+    $shippingBlock = $this->getChild('shipping')->setAddressForReview($shippingAddress);
+?>
+<div class="page-title">
+    <h1><?php echo $this->__('Review Order') ?></h1>
+</div>
+<div class="review-order">
+    <form id="co-payment-form" action="" method="post">
+        <input type="hidden" name="payment[method]" value="<?php echo $this->getQuote()->getPayment()->getMethod() ?>" />
+    </form>
+    <div class="info-set col2-set">
+        <h2 class="legend"><?php echo $this->__('Customer Information') ?></h2>
+        <ul class="form-list form-list-narrow">
+            <li id="customer-info-form" class="address-form">
+                <div class="field">
+                    <label for=""><?php echo $this->__('Email Address') ?></label>
+                    <div class="input-box">
+                        <span><?php echo $this->escapeHtml($billingBlock->getAddress()->getEmail()) ?></span>
+                    </div>
+                </div>
+            </li>
+        </ul>
+    </div>
+    <div class="info-set col2-set">
+        <div class="col-1" id="billing-address">
+            <h2 class="legend"><?php echo $this->__('Billing Address') ?></h2>
+            <?php echo $billingBlock->toHtml(); ?>
+        </div>
+        <div class="col-2" id="shipping-address">
+            <?php if ($shippingAddress): ?>
+                <h2 class="legend"><?php echo $this->__('Shipping Address') ?></h2>
+                <?php echo $shippingBlock->toHtml(); ?>
+            <?php else: ?>
+                <h2 class="legend">&nbsp;</h2>
+            <?php endif; ?>
+        </div>
+    </div>
+    <div class="info-set col2-set">
+        <div class="col-1">
+            <div class="box payment-method">
+                <div class="box-title">
+                    <h3><?php echo $this->__('Payment Method') ?></h3>
+                </div>
+                <div class="box-content">
+                    <span><?php echo $this->getQuote()->getPayment()->getMethodInstance()->getTitle(); ?></span>
+                </div>
+            </div>
+        </div>
+        <div class="col-2">
+            <div class="box shipping-method">
+                <?php if ($shippingAddress): ?>
+                    <div class="box-title">
+                        <h3><?php echo $this->__('Shipping Method') ?></h3>
+                    </div>
+                    <div class="box-content">
+                        <?php $shippingRates = $this->getQuote()->getShippingAddress()->getShippingRatesCollection(); ?>
+                        <?php $methodCode = $this->getQuote()->getShippingAddress()->getShippingMethod(); ?>
+                        <?php foreach($shippingRates as $rate): ?>
+                            <?php if ($methodCode == $rate->getCode()): ?>
+                            <span><?php echo $rate->getCarrierTitle(); ?> (<?php echo $this->getShippingPrice($rate->getPrice(), $this->helper('tax')->displayShippingPriceIncludingTax()); ?>)</span>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php echo $this->getChildHtml('details') ?>
+    <div class="buttons-set buttons-set-order" id="review-buttons-container">
+        <?php echo $this->getChildHtml('agreements') ?>
+        <button type="submit" title="<?php echo $this->__('Place Order') ?>" class="button btn-checkout" id="btn-checkout" onclick="review.save();"><span><span><?php echo $this->__('Place Order') ?></span></span></button>
+        <span class="please-wait" id="review-please-wait" style="display:none;">
+            <img src="<?php echo $this->getSkinUrl('images/opc-ajax-loader.gif') ?>" alt="<?php echo $this->__('Submitting order information...') ?>" title="<?php echo $this->__('Submitting order information...') ?>" class="v-middle" /> <?php echo $this->__('Submitting order information...') ?>
+        </span>        
+    </div>
+</div>
+<script type="text/javascript">
+    //<![CDATA[
+    var Review = Class.create();
+    Review.prototype = {
+        initialize: function(saveUrl, successUrl, failureUrl, agreementsForm){
+            this.saveUrl = saveUrl;
+            this.successUrl = successUrl;
+            this.failureUrl = failureUrl;
+            this.agreementsForm = agreementsForm;
+            this.loadingImage = $('review-please-wait');
+            this.triggerButton = $('btn-checkout');
+        },
+        save: function(){
+            this.loadingImage.show();
+            this.triggerButton.disabled = true;
+            var params = Form.serialize($('co-payment-form'));
+            if (this.agreementsForm){
+                params += '&'+Form.serialize(this.agreementsForm);
+            }
+            params.save = true;
+            var request = new Ajax.Request(
+                this.saveUrl,
+                {
+                    method:'post',
+                    parameters:params,
+                    onComplete: this.onComplete.bindAsEventListener(this),
+                    onSuccess: this.onSave.bindAsEventListener(this),
+                    onFailure: this.onFailure.bindAsEventListener(this)
+                }
+            );              
+        },
+        onComplete: function(transport){
+            //noop
+        },
+        onSave: function(transport){
+            var response = eval('(' + transport.responseText + ')');
+            if (response.success) {
+                location.href = this.successUrl;
+            } else {
+                var msg = response.error_messages;
+                if (typeof(msg)=='object') {
+                    msg = msg.join("\n");
+                }
+                if (msg) {
+                    alert(msg);
+                }
+            }
+        },
+        onFailure: function(transport){
+            location.href = this.failureUrl;
+        }
+    }
+    var review = new Review('<?php echo $this->getUrl('checkout/onepage/saveOrder', array('_secure' => 1, 'form_key' => Mage::getSingleton('core/session')->getFormKey())) ?>', '<?php echo Mage::getUrl('checkout/onepage/success', array('_secure' => 1)) ?>', '<?php echo Mage::getUrl('checkout/cart', array('_secure' => 1)) ?>', $('checkout-agreements'));
+    //]]>
+</script>

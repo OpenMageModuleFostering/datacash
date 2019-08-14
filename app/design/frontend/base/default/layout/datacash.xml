@@ -22,4 +22,32 @@
             <block type="dpg/form_apiprereg" name="payment.method.datacash_api_prereg" />
         </reference>
     </checkout_onepage_paymentmethod>
+    <centinel_index_authenticationcomplete>
+        <reference name="root">
+            <action method="setTemplate">
+                <template>datacash/centinel/complete.phtml</template>
+            </action>
+        </reference>
+    </centinel_index_authenticationcomplete>
+    <datacash_review_index translate="label">
+        <label>One Page Checkout</label>
+        <remove name="right"/>
+        <remove name="left"/>
+        <reference name="root">
+            <action method="setTemplate"><template>page/1column.phtml</template></action>
+        </reference>
+        <reference name="content">
+            <block type="dpg/centinel_review" name="datacash_dpg_centinel_review" template="datacash/centinel/review.phtml">
+                <block type="dpg/centinel_review_billing" name="datacash.review.billing" as="billing" template="datacash/centinel/review/address.phtml"/>
+                <block type="dpg/centinel_review_shipping" name="datacash.review.shipping" as="shipping" template="datacash/centinel/review/address.phtml"/>
+                <block type="checkout/cart_totals" name="datacash.review.details" as="details" template="datacash/centinel/review/details.phtml">
+                    <action method="addItemRender"><type>default</type><block>checkout/cart_item_renderer</block><template>checkout/onepage/review/item.phtml</template></action>
+                    <action method="addItemRender"><type>grouped</type><block>checkout/cart_item_renderer_grouped</block><template>checkout/onepage/review/item.phtml</template></action>
+                    <action method="addItemRender"><type>configurable</type><block>checkout/cart_item_renderer_configurable</block><template>checkout/onepage/review/item.phtml</template></action>
+                    <block type="checkout/cart_totals" name="datacash.review.details.totals" as="totals" template="checkout/onepage/review/totals.phtml"/>
+                </block>
+                <block type="checkout/agreements" name="datacash.review.details.agreements" as="agreements" template="checkout/onepage/agreements.phtml"/>
+            </block>
+        </reference>
+    </datacash_review_index>
 </layout>

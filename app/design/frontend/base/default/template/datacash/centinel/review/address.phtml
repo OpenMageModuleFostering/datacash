@@ -1,0 +1,107 @@
+<fieldset>
+    <ul class="form-list form-list-narrow">
+    <li id="address-form" class="address-form">
+        <fieldset>
+            <ul>
+                <li class="fields">
+                    <div class="field">
+                        <label for=""><?php echo $this->__('First Name') ?></label>
+                        <div class="input-box">
+                            <span><?php echo $this->escapeHtml($this->getAddress()->getFirstname()) ?></span>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label for=""><?php echo $this->__('Last Name') ?></label>
+                        <div class="input-box">
+                            <span><?php echo $this->escapeHtml($this->getAddress()->getLastname()) ?></span>
+                        </div>
+                    </div>
+                </li>
+                <li class="fields">
+                    <div class="field">
+                        <label for=""><?php echo $this->__('Company') ?></label>
+                        <div class="input-box">
+                            <span><?php echo $this->getAddress()->getCompany() ? $this->escapeHtml($this->getAddress()->getCompany()) : '-' ?></span>
+                        </div>
+                    </div>
+        <?php if(!$this->isCustomerLoggedIn() && !$this->getHideEmailAddress()): ?>
+                    <div class="field">
+                        <label for=""><?php echo $this->__('Email Address') ?></label>
+                        <div class="input-box">
+                            <span><?php echo $this->escapeHtml($this->getAddress()->getEmail()) ?></span>
+                        </div>
+                    </div>
+        <?php endif; ?>
+                </li>
+        <?php $_streetValidationClass = $this->helper('customer/address')->getAttributeValidationClass('street'); ?>
+                <li class="wide">
+                    <label for=""><?php echo $this->__('Address') ?></label>
+                    <div class="input-box">
+                        <span><?php echo $this->escapeHtml($this->getAddress()->getStreet(1)) ?></span>
+                    </div>
+                </li>
+        <?php $_streetValidationClass = trim(str_replace('required-entry', '', $_streetValidationClass)); ?>
+        <?php for ($_i = 2, $_n = $this->helper('customer/address')->getStreetLines(); $_i <= $_n; $_i++): ?>
+                <li class="add-field">
+                    <div class="input-box">
+                        <span><?php echo $this->escapeHtml($this->getAddress()->getStreet($_i)) ?></span>
+                    </div>
+                </li>
+        <?php endfor; ?>
+                <?php if ($this->helper('customer/address')->isVatAttributeVisible()) : ?>
+                <li class="wide">
+                    <label for=""><?php echo $this->__('VAT Number') ?></label>
+                    <div class="input-box">
+                        <span><?php echo $this->escapeHtml($this->getAddress()->getVatId()) ?>" title="<?php echo $this->__('VAT Number') ?></span>
+                    </div>
+                </li>
+                <?php endif; ?>
+                <li class="fields">
+                    <div class="field">
+                        <label for=""><?php echo $this->__('City') ?></label>
+                        <div class="input-box">
+                            <span><?php echo $this->escapeHtml($this->getAddress()->getCity()) ?></span>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for=""><?php echo $this->__('State/Province') ?></label>
+                        <div class="input-box">
+                            <span><?php echo $this->getAddress()->getRegion() ? $this->escapeHtml($this->getAddress()->getRegion()) : '-' ?></span>
+                        </div>
+                    </div>
+                </li>
+                <li class="fields">
+                    <div class="field">
+                        <label for=""><?php echo $this->__('Zip/Postal Code') ?></label>
+                        <div class="input-box">
+                            <span><?php echo $this->escapeHtml($this->getAddress()->getPostcode()) ?></span>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for=""><?php echo $this->__('Country') ?></label>
+                        <div class="input-box">
+                            <span><?php echo $this->escapeHtml($this->getAddress()->getCountry()) ?></span>
+                        </div>
+                    </div>
+                </li>
+                <li class="fields">
+                    <div class="field">
+                        <label for=""><?php echo $this->__('Telephone') ?></label>
+                        <div class="input-box">
+                            <span><?php echo $this->escapeHtml($this->getAddress()->getTelephone()) ?></span>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for=""><?php echo $this->__('Fax') ?></label>
+                        <div class="input-box">
+                            <span><?php echo $this->getAddress()->getFax() ? $this->escapeHtml($this->getAddress()->getFax()) : '-' ?></span>
+                        </div>
+                    </div>
+                </li>
+                <?php echo $this->getChildHtml('form.additional.info'); ?>
+            </ul>
+        </fieldset>
+     </li>
+    </ul>
+</fieldset>
