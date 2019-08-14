@@ -139,6 +139,24 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
     }
 
     /**
+     * Ensure that a string will be cut to specified length
+     * @return string
+     */
+    public function safeCity($str)
+    {
+        return substr($str, 0, 20);
+    }
+
+    /**
+     * Ensure that a string will be cut to specified length
+     * @return string
+     */
+    public function safeStreet($str)
+    {
+        return substr($str, 0, 30);
+    }
+
+    /**
      * Call the DataCash API to make an ERP request
      *
      * @return void
@@ -253,9 +271,9 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
                 throw new Exception('Billing address must be specified to addCv2Avs');
             }
             $request->addCv2Avs(
-                $billingAddress->getStreet(1),
-                $billingAddress->getStreet(2),
-                $billingAddress->getCity(),
+                $this->safeStreet($billingAddress->getStreet(1)),
+                $this->safeStreet($billingAddress->getStreet(2)),
+                $this->safeCity($billingAddress->getCity()),
                 $billingAddress->getRegionId(),
                 $billingAddress->getPostcode(),
                 $this->getCreditCardCvv2()
@@ -347,9 +365,9 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
         $map = array(
             'first_name' => new DataCash_Dpg_Helper_Cdata($shippingAddress->getFirstname()),
             'surname' => new DataCash_Dpg_Helper_Cdata($shippingAddress->getLastname()),
-            'address_line1' => new DataCash_Dpg_Helper_Cdata($shippingAddress->getStreet(1)),
-            'address_line2' => new DataCash_Dpg_Helper_Cdata($shippingAddress->getStreet(2)),
-            'city' => new DataCash_Dpg_Helper_Cdata($shippingAddress->getCity()),
+            'address_line1' => new DataCash_Dpg_Helper_Cdata($this->safeStreet($shippingAddress->getStreet(1))),
+            'address_line2' => new DataCash_Dpg_Helper_Cdata($this->safeStreet($shippingAddress->getStreet(2))),
+            'city' => new DataCash_Dpg_Helper_Cdata($this->safeCity($shippingAddress->getCity())),
             'state_province' => $shippingAddress->getRegionCode(),
             'zip_code' => new DataCash_Dpg_Helper_Cdata($shippingAddress->getPostcode()),
             'country' => $shippingAddress->getCountryId(),
@@ -481,9 +499,9 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
             
             if ($address->getId()) {
                 $map = array_merge($map, array(
-                    'address_line1' => new DataCash_Dpg_Helper_Cdata($address->getStreet(1)),
-                    'address_line2' => new DataCash_Dpg_Helper_Cdata($address->getStreet(2)),
-                    'city' => new DataCash_Dpg_Helper_Cdata($address->getCity()),
+                    'address_line1' => new DataCash_Dpg_Helper_Cdata($this->safeStreet($address->getStreet(1))),
+                    'address_line2' => new DataCash_Dpg_Helper_Cdata($this->safeStreet($address->getStreet(2))),
+                    'city' => new DataCash_Dpg_Helper_Cdata($this->safeCity($address->getCity())),
                     'state_province' => $address->getRegionCode(),
                     'zip_code' => new DataCash_Dpg_Helper_Cdata($address->getPostcode()),
                     'country' => $address->getCountryId(),
@@ -496,9 +514,9 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
                 'email_address' => $address->getEmail(),
                 'first_name' => new DataCash_Dpg_Helper_Cdata($address->getFirstname()),
                 'surname' => new DataCash_Dpg_Helper_Cdata($address->getLastname()),
-                'address_line1' => new DataCash_Dpg_Helper_Cdata($address->getStreet(1)),
-                'address_line2' => new DataCash_Dpg_Helper_Cdata($address->getStreet(2)),
-                'city' => new DataCash_Dpg_Helper_Cdata($address->getCity()),
+                'address_line1' => new DataCash_Dpg_Helper_Cdata($this->safeStreet($address->getStreet(1))),
+                'address_line2' => new DataCash_Dpg_Helper_Cdata($this->safeStreet($address->getStreet(2))),
+                'city' => new DataCash_Dpg_Helper_Cdata($this->safeCity($address->getCity())),
                 'state_province' => $address->getRegionCode(),
                 'zip_code' => new DataCash_Dpg_Helper_Cdata($address->getPostcode()),
                 'country' => $address->getCountryId(),
@@ -524,9 +542,9 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
         
         $map = array(
             'name' => new DataCash_Dpg_Helper_Cdata("{$billingAddress->getFirstname()} {$billingAddress->getLastname()}"),
-            'address_line1' => new DataCash_Dpg_Helper_Cdata($billingAddress->getStreet(1)),
-            'address_line2' => new DataCash_Dpg_Helper_Cdata($billingAddress->getStreet(2)),
-            'city' => new DataCash_Dpg_Helper_Cdata($billingAddress->getCity()),
+            'address_line1' => new DataCash_Dpg_Helper_Cdata($this->safeStreet($billingAddress->getStreet(1))),
+            'address_line2' => new DataCash_Dpg_Helper_Cdata($this->safeStreet($billingAddress->getStreet(2))),
+            'city' => new DataCash_Dpg_Helper_Cdata($this->safeCity($billingAddress->getCity())),
             'state_province' => $billingAddress->getRegionCode(),
             'zip_code' => new DataCash_Dpg_Helper_Cdata($billingAddress->getPostcode()),
             'country' => $billingAddress->getCountryId(),
@@ -737,7 +755,7 @@ abstract class DataCash_Dpg_Model_Api_Abstract extends Varien_Object
     {
         $this->_rawResponse = $response;
         $body = new DataCash_Dpg_Model_Datacash_Simplexml_Element($this->_rawResponse->getBody());
-        $this->getResponse()->addData($body->asArray());
+        $this->getResponse()->addData($body->asCanonicalArray());
     }
 
     /**

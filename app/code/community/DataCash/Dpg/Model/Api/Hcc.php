@@ -72,9 +72,9 @@ class DataCash_Dpg_Model_Api_Hcc extends DataCash_Dpg_Model_Api_Abstract
                 throw new Exception('Billing address must be specified to addCv2Avs');
             }
             $request->addCv2Avs(
-                $billingAddress->getStreet(1),
-                $billingAddress->getStreet(2),
-                $billingAddress->getCity(),
+                $this->safeStreet($billingAddress->getStreet(1)),
+                $this->safeStreet($billingAddress->getStreet(2)),
+                $this->safeCity($billingAddress->getCity()),
                 $billingAddress->getRegionId(),
                 $billingAddress->getPostcode(),
                 $this->getCreditCardCvv2()
